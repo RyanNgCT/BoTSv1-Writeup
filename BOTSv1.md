@@ -8,9 +8,9 @@ Question: What is the brand name of the vulnerability scanner, covered by a gree
 
 SPL: `index="botsv1" sourcetype="stream:http" AND Scanner`
 
-![1.1a](../assets/1-1a.png)
+![1.1a](./assets/1-1a.png)
 
-![1.1b](../assets/1-1b.png)
+![1.1b](./assets/1-1b.png)
 
 **A: `Acunetix`**
 
@@ -20,7 +20,7 @@ Question: What is the attacker's IP address?
 
 SPL: *same as above*
 
-![1.2](../assets/1-2.png)
+![1.2](./assets/1-2.png)
 
 **A: `40.80.148.42`**
 
@@ -30,7 +30,7 @@ Question: What is the IP address of the web server serving "imreallynotbatman.co
 
 SPL: `index="botsv1" sourcetype="stream:http" AND Scanner` *or* `index="botsv1" sourcetype="stream:http" AND "imnotreallybatman.com"`
 
-![1.3](../assets/1-3.png)
+![1.3](./assets/1-3.png)
 
 **A: `192.168.250.70`**
 
@@ -44,12 +44,12 @@ Question: What is the name of the file used to deface the web server serving "im
 
 SPL: `index="botsv1" sourcetype="stream:http" AND c_ip="192.168.250.70"`
 
-![1.4a](../assets/1-4a.png)
+![1.4a](./assets/1-4a.png)
 
 
 Go to Interesting Fields > `uri` > move to selected field (i.e. `yes`)
 
-![1.4b](../assets/1-4b.png)
+![1.4b](./assets/1-4b.png)
 
 **A: `poisonivy-is-coming-for-you-batman.jpeg`**
 
@@ -62,7 +62,7 @@ Question: What is the fully qualified domain name (FQDN) used by the staging ser
 
 SPL:  *same as above*
 
-![1.5](../assets/1-5.png)
+![1.5](./assets/1-5.png)
 
 **A: `prankglassinebracket.jumpingcrab.com:1337`**
 
@@ -78,9 +78,9 @@ Question: What is the IP address of the staging server hosting the defacement fi
 
 SPL: `index="botsv1" sourcetype="stream:http" AND prankglassinebracket.jumpingcrab.com AND http_method=GET`
 
-![2.1a](../assets/2-1a.png)
+![2.1a](./assets/2-1a.png)
 
-![2.1b](../assets/2-1b.png)
+![2.1b](./assets/2-1b.png)
 
 **A: `23.22.63.114`**
 
@@ -90,7 +90,7 @@ Question: What is the Leetspeak domain found on the staging server? Use a search
 
 SPL: *N.A.*
 
-![2.2](../assets/2-2.png)
+![2.2](./assets/2-2.png)
 
 **A: `po1s0n1vy.com`**
 
@@ -103,7 +103,7 @@ SPL: `index="botsv1" sourcetype="stream:http" AND "imreallynotbatman.com" | stat
 - obtain results counted by source and destination ip by descending count to pinpoint likely attacker address (source) -> may be both 23.22.x.x or 40.80.x.x
 - answer limited to target web site
 
-![2.3a](../assets/2-3a.png)
+![2.3a](./assets/2-3a.png)
 
 
 >Hints
@@ -113,11 +113,11 @@ SPL: `index="botsv1" sourcetype="stream:http" AND "imreallynotbatman.com" | stat
 >- To make a useful table, add this to your query: 
     > **`| table _time, form_data`**
 
-![2.3b](../assets/2-3b.png)
+![2.3b](./assets/2-3b.png)
 
 SPL: `index="botsv1" sourcetype="stream:http" AND "imreallynotbatman.com" AND http_method=POST AND (NOT Acunetix) AND "user" in form_data AND "pass" in form_data | table _time, src_ip, dest_ip, form_data`
 
-![2.3c](../assets/2-3c.png)
+![2.3c](./assets/2-3c.png)
 
 
 **A: `23.22.63.114`**
@@ -134,12 +134,12 @@ Question: What is the name of the executable file the attacker uploaded to the s
 SPL: `index="botsv1" sourcetype="stream:http" AND "imreallynotbatman.com" AND http_method=POST AND (NOT Acunetix) AND (exe OR dll OR elf)`
 - search on the most common executable formats
 
-![2.4a](../assets/2-4a.png)
+![2.4a](./assets/2-4a.png)
 
 
 Next we can do a `Ctrl-F` for `.exe`, `.dll` and `.elf`. The first yields `3791.exe`, while the latter two yield no results.
 
-![2.4b](../assets/2-4b.png)
+![2.4b](./assets/2-4b.png)
 
 **A: `3791.exe`**
 
@@ -148,15 +148,43 @@ Next we can do a `Ctrl-F` for `.exe`, `.dll` and `.elf`. The first yields `3791.
 
 #### BOTSv1 3.1: MD5 (10 pts)
 
-Question: What is the MD5 hash of the uploaded executable file?
+Question: In *Level 2*, you found the name of an executable file the attackers uploaded to the server. Find that file's MD5 hash.
 
-SPL: ``
+>Hints:
+>- Read about **[Sysmon Event IDs](https://docs.microsoft.com/en-us/sysinternals/downloads/sysmon)**
+>- Find events from Sysmon for process creation.
+>- Examine **cmdline** to find the correct event.
 
-A:
+SPL: `index="botsv1" sourcetype="XmlWinEventLog:Microsoft-Windows-Sysmon/Operational" EventID=1 AND "3791.exe"`
+
+![3.1a](./assets/3-1a.png)
+
+Select `3791.exe` in `cmdline` field or `CommandLine` also works.
+
+![3.1b](./assets/3-1b.png)
+
+**A: `AAE3F5A29935E6ABCC2C2754D12A9AF0`**
 
 #### BOTSv1 3.2: Brute Force (10 pts)
 
 Question: What was the first brute force password used?
+
+SPL: `index="botsv1" sourcetype="XmlWinEventLog:Microsoft-Windows-Sysmon/Operational" EventID=3 AND NOT (SourceIp=127.0.0.1)| stats count by SourceIp, DestinationIp | sort -count`
+	- For general sensing (and obviously I was using the wrong `sourcetype` lol)
+
+![3.2a](./assets/3-2a.png)
+
+
+SPL: `index="botsv1" sourcetype="stream:http" AND "username=" in form_data AND http_method=POST | sort _time | table _time, form_data`
+
+![3.2b](./assets/3-2b.png)
+
+Proper way of doing things
+>Hints:
+>- Start with 1:10 sampling.
+>- Find events containing "login".
+>- Find top values of "url".
+>- Examine the `"form_data"` values to identify the brute force attack.
 
 SPL: ``
 
